@@ -1221,6 +1221,10 @@ class HFLM(TemplateLM):
                 until = [eos]
             else:
                 until.append(eos)
+
+            # NOTE(yifan): add <end_of_turn> to stop sequences
+            until.append("<end_of_turn>")
+
             if "max_gen_toks" in kwargs.keys():
                 max_gen_toks = kwargs.pop("max_gen_toks")
             else:
@@ -1290,9 +1294,12 @@ class HFLM(TemplateLM):
             )
         except jinja2.exceptions.TemplateError:
             eval_logger.warning(
-                "Failed to apply chat template. removing the system role in chat history."
+                "Failed to apply chat template. Prepending the system prompt to the first user content."
             )
-            chat_history = [msg for msg in chat_history if msg["role"] != "system"]
+            # chat_history = [msg for msg in chat_history if msg["role"] != "system"]
+            assert chat_history[0]['role'] == 'system' and chat_history[1]['role'] == 'user'
+            chat_history[1]['content'] = chat_history[0]['content'] + "\n" + chat_history[1]['content']
+            chat_history = chat_history[1:]
             chat_templated = self.tokenizer.apply_chat_template(
                 chat_history, tokenize=False, add_generation_prompt=True
             )
